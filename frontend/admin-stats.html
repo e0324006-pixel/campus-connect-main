@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Statistics</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth('ADMIN')) throw new Error();
+const userId = getUserId(), role = getRole();
+let notifications = [], stats = {};
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = nr ? await nr.json() : [];
+  const unread = notifications.filter(n => !n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"><div class="loading-spinner"></div></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  const r = await apiFetch('/api/admin/stats');
+  stats = r ? await r.json() : {};
+  renderPage();
+}
+
+function renderPage() {
+  const mc = document.getElementById('mainContent');
+  const companies = stats.jobsByCompany || [];
+
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">
+        <h2>📊 Placement Statistics</h2>
+        <p>Real-time platform analytics</p>
+      </div>
+    </div>
+
+    <!-- Top-level stats -->
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:24px;">
+      <div class="stat-card">
+        <div class="stat-icon indigo">🎓</div>
+        <div><div class="stat-value">${stats.totalStudents || 0}</div><div class="stat-label">Students</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon amber">🏢</div>
+        <div><div class="stat-value">${stats.totalRecruiters || 0}</div><div class="stat-label">Recruiters</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue">💼</div>
+        <div><div class="stat-value">${stats.totalJobs || 0}</div><div class="stat-label">Total Jobs</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">🟢</div>
+        <div><div class="stat-value">${stats.openJobs || 0}</div><div class="stat-label">Open Jobs</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon orange">📋</div>
+        <div><div class="stat-value">${stats.totalApplications || 0}</div><div class="stat-label">Applications</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green">✅</div>
+        <div><div class="stat-value">${stats.placed || 0}</div><div class="stat-label">Placed</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon red">📈</div>
+        <div><div class="stat-value">${stats.placementRate || 0}%</div><div class="stat-label">Placement Rate</div></div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon indigo">💰</div>
+        <div><div class="stat-value">${stats.avgCtcLpa || 0} LPA</div><div class="stat-label">Avg CTC</div></div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <!-- Placement Funnel -->
+      <div class="card">
+        <div class="card-title">📊 Application Funnel</div>
+        <div style="margin-top:8px;">
+          ${renderFunnelBar('Total Applications', stats.totalApplications, stats.totalApplications, 'var(--primary)')}
+          ${renderFunnelBar('Shortlisted', stats.shortlisted, stats.totalApplications, 'var(--warning)')}
+          ${renderFunnelBar('Selected / Placed', stats.placed, stats.totalApplications, 'var(--success)')}
+        </div>
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+          <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+            <span class="text-muted text-sm">Shortlist Rate</span>
+            <span style="font-weight:700;color:var(--warning)">
+              ${stats.totalApplications > 0 ? Math.round((stats.shortlisted/stats.totalApplications)*100) : 0}%
+            </span>
+          </div>
+          <div style="display:flex;justify-content:space-between;">
+            <span class="text-muted text-sm">Offer Rate</span>
+            <span style="font-weight:700;color:var(--success)">
+              ${stats.totalApplications > 0 ? Math.round((stats.placed/stats.totalApplications)*100) : 0}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Company Breakdown -->
+      <div class="card">
+        <div class="card-title">🏢 Jobs by Company</div>
+        ${companies.length === 0
+          ? '<div class="empty-state" style="padding:24px"><p>No data yet</p></div>'
+          : companies.map(c => `
+            <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);">
+              <div class="applicant-avatar" style="width:32px;height:32px;font-size:.8rem;border-radius:8px;flex-shrink:0">
+                ${c.company.charAt(0)}
+              </div>
+              <span style="flex:1;font-size:.875rem;font-weight:600;">${c.company}</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div style="width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden;">
+                  <div style="height:100%;background:var(--primary);border-radius:3px;width:${Math.min(100,(c.jobs/(Math.max(...companies.map(x=>x.jobs))))*100)}%"></div>
+                </div>
+                <span class="badge badge-applied">${c.jobs}</span>
+              </div>
+            </div>`).join('')}
+      </div>
+    </div>
+
+    <!-- Placement Rate Visual -->
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title">🎯 Overall Placement Rate</div>
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;padding:16px 0;">
+        <div style="position:relative;width:120px;height:120px;flex-shrink:0;">
+          ${renderDonut(parseFloat(stats.placementRate) || 0)}
+        </div>
+        <div>
+          <div style="font-size:2.5rem;font-weight:800;color:var(--primary);line-height:1;">${stats.placementRate || 0}%</div>
+          <div class="text-muted text-sm" style="margin-top:4px;">of registered students placed</div>
+          <div style="margin-top:16px;display:flex;gap:24px;flex-wrap:wrap;">
+            <div><div style="font-size:1.25rem;font-weight:700;color:var(--success)">${stats.placed || 0}</div><div class="text-muted text-xs">Placed</div></div>
+            <div><div style="font-size:1.25rem;font-weight:700;color:var(--warning)">${stats.shortlisted || 0}</div><div class="text-muted text-xs">Shortlisted</div></div>
+            <div><div style="font-size:1.25rem;font-weight:700;color:var(--text-muted)">${(stats.totalStudents||0) - (stats.placed||0)}</div><div class="text-muted text-xs">Unplaced</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderFunnelBar(label, value, total, color) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  return `
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span class="text-sm" style="font-weight:600;">${label}</span>
+        <span class="text-sm" style="color:${color};font-weight:700;">${value || 0} (${pct}%)</span>
+      </div>
+      <div class="match-bar">
+        <div class="match-fill" style="width:${pct}%;background:${color};transition:width .6s ease;"></div>
+      </div>
+    </div>`;
+}
+
+function renderDonut(pct) {
+  const r = 50, cx = 60, cy = 60;
+  const circumference = 2 * Math.PI * r;
+  const dashOffset = circumference - (pct / 100) * circumference;
+  return `
+    <svg viewBox="0 0 120 120" width="120" height="120">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--border)" stroke-width="14"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--primary)" stroke-width="14"
+        stroke-dasharray="${circumference}" stroke-dashoffset="${dashOffset}"
+        stroke-linecap="round" transform="rotate(-90 ${cx} ${cy})"
+        style="transition:stroke-dashoffset .8s ease;"/>
+    </svg>`;
+}
+
+init();
+</script>
+</body>
+</html>

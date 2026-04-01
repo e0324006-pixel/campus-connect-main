@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Panel — Campus Connect</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<!-- NAV -->
+<nav class="navbar">
+  <a href="dashboard.html" class="nav-brand">🎓 Campus<span>Connect</span></a>
+  <div class="nav-links">
+    <a href="dashboard.html" class="nav-link">Dashboard</a>
+    <a href="admin.html" class="nav-link active">Admin Panel</a>
+  </div>
+  <div class="nav-user">
+    <span class="badge badge-admin">Admin</span>
+    <span id="navName">Admin</span>
+    <button class="btn btn-ghost btn-sm" onclick="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-section">
+      <div class="sidebar-label">Admin Panel</div>
+      <a class="sidebar-link active" onclick="showTab('overview')" href="#">📊 Overview</a>
+      <a class="sidebar-link" onclick="showTab('students')" href="#">🎓 Students</a>
+      <a class="sidebar-link" onclick="showTab('recruiters')" href="#">🏢 Recruiters</a>
+      <a class="sidebar-link" onclick="showTab('jobs')" href="#">💼 All Jobs</a>
+      <a class="sidebar-link" onclick="showTab('approvals')" href="#">✅ Approvals</a>
+      <a class="sidebar-link" onclick="showTab('broadcast')" href="#">📣 Broadcast</a>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+    <div id="alert-box" class="hidden" style="margin-bottom:16px;"></div>
+
+    <!-- OVERVIEW TAB -->
+    <div id="tab-overview">
+      <h2 class="page-title">Placement Statistics</h2>
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card">
+          <div class="stat-icon">🎓</div>
+          <div class="stat-value" id="st-students">—</div>
+          <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏢</div>
+          <div class="stat-value" id="st-recruiters">—</div>
+          <div class="stat-label">Recruiters</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💼</div>
+          <div class="stat-value" id="st-jobs">—</div>
+          <div class="stat-label">Total Jobs</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-value" id="st-apps">—</div>
+          <div class="stat-label">Applications</div>
+        </div>
+        <div class="stat-card stat-card-accent">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="st-placed">—</div>
+          <div class="stat-label">Students Placed</div>
+        </div>
+        <div class="stat-card stat-card-accent">
+          <div class="stat-icon">📈</div>
+          <div class="stat-value" id="st-rate">—</div>
+          <div class="stat-label">Placement Rate</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-value" id="st-ctc">—</div>
+          <div class="stat-label">Avg CTC (LPA)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔓</div>
+          <div class="stat-value" id="st-open">—</div>
+          <div class="stat-label">Open Positions</div>
+        </div>
+      </div>
+
+      <h3 style="margin:32px 0 16px;font-size:1.1rem;">Jobs by Company</h3>
+      <div class="card" id="companyChart" style="padding:24px;">
+        <p style="color:var(--text-muted);">Loading chart…</p>
+      </div>
+    </div>
+
+    <!-- STUDENTS TAB -->
+    <div id="tab-students" class="hidden">
+      <h2 class="page-title">All Students</h2>
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table" id="studentsTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Name</th><th>Email</th><th>Dept</th>
+              <th>Year</th><th>CGPA</th><th>College</th><th>Skills</th>
+            </tr>
+          </thead>
+          <tbody id="studentsTbody">
+            <tr><td colspan="8" style="text-align:center;color:var(--text-muted);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- RECRUITERS TAB -->
+    <div id="tab-recruiters" class="hidden">
+      <h2 class="page-title">All Recruiters</h2>
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table" id="recruitersTable">
+          <thead>
+            <tr>
+              <th>ID</th><th>Name</th><th>Company</th><th>Industry</th>
+              <th>Email</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recruitersTbody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- JOBS TAB -->
+    <div id="tab-jobs" class="hidden">
+      <h2 class="page-title">All Job Listings</h2>
+      <div class="card" style="overflow-x:auto;">
+        <table class="data-table">
+          <thead>
+            <tr><th>Title</th><th>Company</th><th>Type</th><th>CTC (LPA)</th><th>Location</th><th>Status</th></tr>
+          </thead>
+          <tbody id="allJobsTbody">
+            <tr><td colspan="6" style="text-align:center;color:var(--text-muted);">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- APPROVALS TAB -->
+    <div id="tab-approvals" class="hidden">
+      <h2 class="page-title">Pending Recruiter Approvals</h2>
+      <div id="approvalsList">
+        <p style="color:var(--text-muted);">Loading…</p>
+      </div>
+    </div>
+
+    <!-- BROADCAST TAB -->
+    <div id="tab-broadcast" class="hidden">
+      <h2 class="page-title">Broadcast Notification</h2>
+      <div class="card" style="max-width:600px;padding:28px;">
+        <div class="form-group">
+          <label>Target Audience</label>
+          <select id="broadcastTarget" class="input">
+            <option value="ALL">All Users</option>
+            <option value="STUDENT">Students Only</option>
+            <option value="RECRUITER">Recruiters Only</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Message</label>
+          <textarea id="broadcastMsg" class="input" rows="4"
+            placeholder="Type your announcement here…" style="resize:vertical;"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="sendBroadcast()">📣 Send Broadcast</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="app.js"></script>
+<script>
+  requireAuth('ADMIN');
+  document.getElementById('navName').textContent = getUser().name;
+
+  let activeTab = 'overview';
+  const token = getToken();
+
+  function showTab(tab) {
+    document.querySelectorAll('[id^="tab-"]').forEach(el => el.classList.add('hidden'));
+    document.querySelectorAll('.sidebar-link').forEach(el => el.classList.remove('active'));
+    document.getElementById('tab-' + tab).classList.remove('hidden');
+    document.querySelectorAll('.sidebar-link')[
+      ['overview','students','recruiters','jobs','approvals','broadcast'].indexOf(tab)
+    ]?.classList.add('active');
+    activeTab = tab;
+    loadTab(tab);
+  }
+
+  function loadTab(tab) {
+    if (tab === 'overview') loadStats();
+    else if (tab === 'students') loadStudents();
+    else if (tab === 'recruiters') loadRecruiters();
+    else if (tab === 'jobs') loadAllJobs();
+    else if (tab === 'approvals') loadApprovals();
+  }
+
+  async function loadStats() {
+    const data = await apiFetch('/api/admin/stats');
+    if (!data) return;
+    document.getElementById('st-students').textContent = data.totalStudents;
+    document.getElementById('st-recruiters').textContent = data.totalRecruiters;
+    document.getElementById('st-jobs').textContent = data.totalJobs;
+    document.getElementById('st-apps').textContent = data.totalApplications;
+    document.getElementById('st-placed').textContent = data.placed;
+    document.getElementById('st-rate').textContent = data.placementRate + '%';
+    document.getElementById('st-ctc').textContent = data.avgCtcLpa + ' LPA';
+    document.getElementById('st-open').textContent = data.openJobs;
+
+    // Company bar chart
+    const chart = document.getElementById('companyChart');
+    if (data.jobsByCompany && data.jobsByCompany.length > 0) {
+      const max = Math.max(...data.jobsByCompany.map(c => c.jobs));
+      chart.innerHTML = data.jobsByCompany.map(c => `
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+          <div style="width:180px;font-size:.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${c.company}</div>
+          <div style="flex:1;background:var(--border);border-radius:4px;height:24px;overflow:hidden;">
+            <div style="background:var(--primary);height:100%;width:${(c.jobs/max)*100}%;border-radius:4px;display:flex;align-items:center;padding-left:8px;color:#fff;font-size:.75rem;font-weight:700;">${c.jobs} jobs</div>
+          </div>
+        </div>`).join('');
+    } else {
+      chart.innerHTML = '<p style="color:var(--text-muted);">No data yet.</p>';
+    }
+  }
+
+  async function loadStudents() {
+    const data = await apiFetch('/api/admin/users?role=STUDENT');
+    const tbody = document.getElementById('studentsTbody');
+    if (!data || !data.students) { tbody.innerHTML = '<tr><td colspan="8">No students found.</td></tr>'; return; }
+    tbody.innerHTML = data.students.map(s => `
+      <tr>
+        <td><code style="font-size:.75rem;">${s.userId}</code></td>
+        <td><strong>${s.name}</strong></td>
+        <td>${s.email}</td>
+        <td>${s.department}</td>
+        <td>Year ${s.year}</td>
+        <td><span class="badge ${s.cgpa >= 8 ? 'badge-success' : s.cgpa >= 7 ? 'badge-warning' : 'badge-danger'}">${s.cgpa}</span></td>
+        <td>${s.college || '—'}</td>
+        <td><div style="display:flex;flex-wrap:wrap;gap:4px;">${(s.skills||[]).slice(0,3).map(sk => `<span class="tag">${sk}</span>`).join('')}${s.skills?.length > 3 ? `<span class="tag">+${s.skills.length-3}</span>` : ''}</div></td>
+      </tr>`).join('');
+  }
+
+  async function loadRecruiters() {
+    const data = await apiFetch('/api/admin/users?role=RECRUITER');
+    const tbody = document.getElementById('recruitersTbody');
+    if (!data || !data.recruiters) { tbody.innerHTML = '<tr><td colspan="6">No recruiters found.</td></tr>'; return; }
+    tbody.innerHTML = data.recruiters.map(r => `
+      <tr>
+        <td><code style="font-size:.75rem;">${r.userId}</code></td>
+        <td><strong>${r.name}</strong></td>
+        <td>${r.companyName}</td>
+        <td>${r.industry}</td>
+        <td>${r.email}</td>
+        <td><span class="badge ${r.isApproved ? 'badge-success' : 'badge-warning'}">${r.isApproved ? 'Approved' : 'Pending'}</span></td>
+      </tr>`).join('');
+  }
+
+  async function loadAllJobs() {
+    const data = await apiFetch('/api/jobs');
+    const tbody = document.getElementById('allJobsTbody');
+    if (!data || !data.length) { tbody.innerHTML = '<tr><td colspan="6">No jobs found.</td></tr>'; return; }
+    tbody.innerHTML = data.map(j => `
+      <tr>
+        <td><strong>${j.title}</strong></td>
+        <td>${j.companyName}</td>
+        <td><span class="badge badge-info">${j.jobType}</span></td>
+        <td>₹${(j.ctcMin/100000).toFixed(1)}–${(j.ctcMax/100000).toFixed(1)} LPA</td>
+        <td>${j.location}</td>
+        <td><span class="badge ${j.status==='OPEN' ? 'badge-success' : 'badge-danger'}">${j.status}</span></td>
+      </tr>`).join('');
+  }
+
+  async function loadApprovals() {
+    const data = await apiFetch('/api/admin/users?role=RECRUITER');
+    const container = document.getElementById('approvalsList');
+    if (!data || !data.recruiters) { container.innerHTML = '<p>No data.</p>'; return; }
+    const pending = data.recruiters.filter(r => !r.isApproved);
+    if (pending.length === 0) {
+      container.innerHTML = '<div class="card" style="padding:24px;text-align:center;color:var(--text-muted);">✅ No pending approvals.</div>';
+      return;
+    }
+    container.innerHTML = pending.map(r => `
+      <div class="card" style="padding:20px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <div style="font-weight:700;font-size:1rem;">${r.name}</div>
+          <div style="color:var(--text-muted);font-size:.85rem;">${r.companyName} · ${r.industry} · ${r.email}</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-sm btn-primary" onclick="approveRecruiter('${r.userId}','approve')">✓ Approve</button>
+          <button class="btn btn-sm btn-danger" onclick="approveRecruiter('${r.userId}','reject')">✗ Reject</button>
+        </div>
+      </div>`).join('');
+  }
+
+  async function approveRecruiter(recruiterId, action) {
+    const data = await apiFetch('/api/admin/approve', {
+      method: 'POST',
+      body: JSON.stringify({ recruiterId, action })
+    });
+    if (data) {
+      showAlert(action === 'approve' ? 'Recruiter approved!' : 'Recruiter rejected.', action === 'approve' ? 'success' : 'error');
+      loadApprovals();
+    }
+  }
+
+  async function sendBroadcast() {
+    const message = document.getElementById('broadcastMsg').value.trim();
+    const target = document.getElementById('broadcastTarget').value;
+    if (!message) { showAlert('Please enter a message.', 'error'); return; }
+    const data = await apiFetch('/api/admin/broadcast', {
+      method: 'POST',
+      body: JSON.stringify({ message, target })
+    });
+    if (data) {
+      showAlert('Broadcast sent successfully!', 'success');
+      document.getElementById('broadcastMsg').value = '';
+    }
+  }
+
+  function showAlert(msg, type) {
+    const el = document.getElementById('alert-box');
+    el.className = `alert alert-${type}`;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    setTimeout(() => el.classList.add('hidden'), 4000);
+  }
+
+  // Initial load
+  loadStats();
+</script>
+</body>
+</html>

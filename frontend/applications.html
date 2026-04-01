@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — My Applications</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth()) throw new Error();
+const userId = getUserId();
+const role = getRole();
+let notifications = [], applications = [];
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = await nr.json();
+  const unread = notifications.filter(n => !n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"><div class="loading-spinner"></div></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  const appsRes = await apiFetch(`/api/applications?studentId=${userId}`);
+  applications = await appsRes.json();
+  renderPage();
+}
+
+function renderPage() {
+  const counts = { total: applications.length };
+  ['APPLIED','SHORTLISTED','INTERVIEW_SCHEDULED','SELECTED','REJECTED'].forEach(s => {
+    counts[s] = applications.filter(a => a.status === s).length;
+  });
+
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">
+        <h2>📋 My Applications</h2>
+        <p>Track all your job applications in one place</p>
+      </div>
+      <a href="jobs.html" class="btn btn-primary">Browse More Jobs</a>
+    </div>
+
+    <div class="stats-grid" style="grid-template-columns:repeat(5,1fr)">
+      <div class="stat-card"><div class="stat-icon blue">📋</div><div><div class="stat-value">${counts.total}</div><div class="stat-label">Total</div></div></div>
+      <div class="stat-card"><div class="stat-icon indigo">📤</div><div><div class="stat-value">${counts.APPLIED}</div><div class="stat-label">Applied</div></div></div>
+      <div class="stat-card"><div class="stat-icon amber">⭐</div><div><div class="stat-value">${counts.SHORTLISTED + counts.INTERVIEW_SCHEDULED}</div><div class="stat-label">Shortlisted</div></div></div>
+      <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value">${counts.SELECTED}</div><div class="stat-label">Selected</div></div></div>
+      <div class="stat-card"><div class="stat-icon red">❌</div><div><div class="stat-value">${counts.REJECTED}</div><div class="stat-label">Rejected</div></div></div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="filterByStatus('ALL', this)">All (${counts.total})</button>
+      <button class="tab-btn" onclick="filterByStatus('APPLIED', this)">Applied</button>
+      <button class="tab-btn" onclick="filterByStatus('SHORTLISTED', this)">Shortlisted</button>
+      <button class="tab-btn" onclick="filterByStatus('INTERVIEW_SCHEDULED', this)">Interview</button>
+      <button class="tab-btn" onclick="filterByStatus('SELECTED', this)">Selected</button>
+      <button class="tab-btn" onclick="filterByStatus('REJECTED', this)">Rejected</button>
+    </div>
+
+    <div id="appsList"></div>
+  `;
+  renderAppsList('ALL');
+}
+
+let currentFilter = 'ALL';
+function filterByStatus(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAppsList(status);
+}
+
+function renderAppsList(filter) {
+  const filtered = filter === 'ALL' ? applications : applications.filter(a => a.status === filter);
+  const container = document.getElementById('appsList');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><h3>No applications here</h3><p><a href="jobs.html">Browse jobs to apply</a></p></div>`;
+    return;
+  }
+  container.innerHTML = filtered.map(a => `
+    <div class="card" style="margin-bottom:12px;">
+      <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div class="applicant-avatar" style="width:48px;height:48px;font-size:1.1rem;border-radius:12px;flex-shrink:0">
+          ${a.companyName.charAt(0)}
+        </div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-size:1rem;font-weight:700">${a.jobTitle}</div>
+          <div style="color:var(--text-muted);font-size:.875rem;margin-top:2px">${a.companyName}</div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            ${statusBadge(a.status)}
+            <span class="text-xs text-muted">Applied ${formatDate(a.appliedDate)}</span>
+            ${a.interviewId ? `<span class="badge badge-interview">📅 Interview Scheduled</span>` : ''}
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          ${a.status === 'SELECTED' ? '<div style="font-size:1.5rem">🎉</div>' : ''}
+          ${a.status === 'REJECTED' && a.recruiterNote ? `<div class="text-xs text-muted mt-1" style="max-width:180px;text-align:right">"${a.recruiterNote}"</div>` : ''}
+        </div>
+      </div>
+      ${a.coverLetter ? `<div style="margin-top:12px;padding:10px;background:var(--bg);border-radius:8px;font-size:.8rem;color:var(--text-muted)"><strong>Cover Letter:</strong> ${a.coverLetter.substring(0,150)}${a.coverLetter.length>150?'...':''}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+init();
+</script>
+</body>
+</html>

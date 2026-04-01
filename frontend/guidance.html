@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Career Guidance</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth()) throw new Error();
+const userId = getUserId();
+const role = getRole();
+let notifications = [];
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = await nr.json();
+  const unread = notifications.filter(n=>!n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"><div class="loading-spinner"></div></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  const res = await apiFetch(`/api/guidance?studentId=${userId}`);
+  const guidance = await res.json();
+  renderPage(guidance);
+}
+
+function renderPage(g) {
+  const mc = document.getElementById('mainContent');
+  const recs = g.recommendedJobs || [];
+  const gaps = g.skillGaps || [];
+
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><h2>🤖 Career Guidance</h2><p>Personalized insights based on your profile and market demand</p></div>
+    </div>
+
+    <div class="two-col" style="margin-bottom:20px">
+      <div class="card">
+        <div class="card-title">🎯 Your Skills</div>
+        <div class="job-skills" style="gap:8px">
+          ${(g.skills||[]).map(s => `<span class="skill-tag matched">${s}</span>`).join('') || '<p class="text-muted">No skills added. <a href="profile.html">Update profile →</a></p>'}
+        </div>
+        <div style="margin-top:16px;display:flex;gap:16px">
+          <div><div class="stat-value text-primary">${g.cgpa||'–'}</div><div class="stat-label">CGPA</div></div>
+          <div><div class="stat-value" style="color:var(--success)">${(g.skills||[]).length}</div><div class="stat-label">Skills Listed</div></div>
+          <div><div class="stat-value" style="color:var(--accent)">${recs.length}</div><div class="stat-label">Job Matches</div></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📊 Top Skill Gaps</div>
+        <p class="text-muted text-sm" style="margin-bottom:12px">Skills most required by open jobs that you haven't listed</p>
+        ${gaps.length === 0
+          ? '<div class="empty-state" style="padding:16px"><p>No skill gaps detected — great job! 🎉</p></div>'
+          : gaps.slice(0, 6).map(g => `
+            <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+              <span class="badge ${g.priority==='HIGH'?'badge-rejected':g.priority==='MEDIUM'?'badge-shortlisted':'badge-applied'}">${g.priority}</span>
+              <span style="font-weight:600;font-size:.875rem">${g.skill}</span>
+              <span class="text-xs text-muted" style="margin-left:auto">${g.jobsRequiringIt} jobs</span>
+            </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">💼 Recommended Jobs for You</div>
+      <p class="text-muted text-sm" style="margin-bottom:16px">Ranked by skill match percentage based on your profile</p>
+      ${recs.length === 0
+        ? `<div class="empty-state"><div class="empty-icon">💼</div><h3>No matches found</h3><p><a href="profile.html">Add skills to your profile</a> to get recommendations.</p></div>`
+        : `<div class="jobs-grid">${recs.map(r => `
+          <div class="job-card">
+            <div class="job-card-header">
+              <div class="job-company-logo">${r.company.charAt(0)}</div>
+              <div style="flex:1">
+                <div class="job-title">${r.title}</div>
+                <div class="job-company">${r.company}</div>
+              </div>
+              ${r.eligible ? '<span class="badge badge-selected">✅ Eligible</span>' : '<span class="badge badge-rejected">📋 Not Eligible</span>'}
+            </div>
+            ${matchBar(r.matchScore)}
+            ${r.missingSkills && r.missingSkills.length > 0 ? `
+            <div>
+              <div class="text-xs text-muted fw-600 mb-1">SKILLS TO LEARN</div>
+              <div class="job-skills">${r.missingSkills.map(s => `<span class="skill-tag missing">+ ${s}</span>`).join('')}</div>
+            </div>` : '<div class="text-sm text-success fw-600">✨ You have all required skills!</div>'}
+            <a href="jobs.html" class="btn btn-primary btn-sm w-full">View & Apply →</a>
+          </div>`).join('')}</div>`
+      }
+    </div>
+
+    <div class="card mt-4">
+      <div class="card-title">📚 Learning Roadmap</div>
+      <p class="text-muted text-sm" style="margin-bottom:16px">Suggested learning path to boost your placement chances</p>
+      <div class="two-col">
+        ${gaps.slice(0,4).map((g,i) => `
+        <div style="display:flex;gap:12px;padding:12px;background:var(--bg);border-radius:var(--radius-sm)">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--primary);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0">${i+1}</div>
+          <div>
+            <div style="font-weight:700">${g.skill}</div>
+            <div class="text-xs text-muted">Needed by ${g.jobsRequiringIt} companies • ${g.priority} priority</div>
+            <div class="text-xs" style="margin-top:4px;color:var(--info)">📖 Search on Coursera / YouTube / Udemy</div>
+          </div>
+        </div>`).join('') || '<p class="text-muted">Your skill set looks great! Keep learning to stay ahead.</p>'}
+      </div>
+    </div>
+  `;
+}
+
+init();
+</script>
+</body>
+</html>

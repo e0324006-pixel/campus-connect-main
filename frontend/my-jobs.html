@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — My Jobs</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth()) throw new Error();
+const userId = getUserId();
+const role = getRole();
+let notifications = [], jobs = [];
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = await nr.json();
+  const unread = notifications.filter(n=>!n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"><div class="loading-spinner"></div></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  const r = await apiFetch(`/api/jobs?recruiterId=${userId}`);
+  jobs = await r.json();
+  renderPage();
+}
+
+function renderPage() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><h2>💼 My Job Listings</h2><p>${jobs.length} jobs posted</p></div>
+      <a href="post-job.html" class="btn btn-primary">+ Post New Job</a>
+    </div>
+    <div id="jobsList"></div>
+  `;
+  renderJobsList();
+}
+
+function renderJobsList() {
+  const container = document.getElementById('jobsList');
+  if (jobs.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">💼</div><h3>No jobs posted yet</h3><p><a href="post-job.html">Post your first job →</a></p></div>`;
+    return;
+  }
+  container.innerHTML = jobs.map(j => `
+    <div class="card" style="margin-bottom:12px">
+      <div style="display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap">
+        <div class="job-company-logo">${j.companyName.charAt(0)}</div>
+        <div style="flex:1;min-width:200px">
+          <div style="font-weight:700;font-size:1rem">${j.title}</div>
+          <div class="text-muted text-sm">${j.location} • ${formatCTC(j.ctcMin, j.ctcMax)}</div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+            ${statusBadge(j.status)} ${statusBadge(j.jobType)}
+            <span class="badge badge-applied">📋 ${(j.applicationIds||[]).length} applicants</span>
+          </div>
+          <div class="job-skills" style="margin-top:8px">${(j.requiredSkills||[]).map(s=>`<span class="skill-tag">${s}</span>`).join('')}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+          <a href="applicants.html?jobId=${j.jobId}" class="btn btn-secondary btn-sm">👥 Applicants</a>
+          ${j.status === 'OPEN' ? `<button class="btn btn-warning btn-sm" onclick="closeJob('${j.jobId}', this)">Close Job</button>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function closeJob(jobId, btn) {
+  if (!confirm('Are you sure you want to close this job listing?')) return;
+  btn.disabled = true;
+  await apiFetch('/api/jobs/close', { method: 'POST', body: JSON.stringify({ jobId }) });
+  showToast('Job closed.');
+  const r = await apiFetch(`/api/jobs?recruiterId=${userId}`);
+  jobs = await r.json();
+  renderJobsList();
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Browse Jobs</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth()) throw new Error();
+
+const userId = getUserId();
+const role = getRole();
+let allJobs = [], myApplications = [], studentProfile = null, notifications = [];
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = await nr.json();
+  const unread = notifications.filter(n => !n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent">
+        <div class="loading-spinner"></div>
+      </main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  const [jobsRes] = await Promise.all([apiFetch('/api/jobs')]);
+  allJobs = await jobsRes.json();
+
+  if (role === 'STUDENT') {
+    const [appsRes, profRes] = await Promise.all([
+      apiFetch(`/api/applications?studentId=${userId}`),
+      apiFetch(`/api/profile/student?studentId=${userId}`)
+    ]);
+    myApplications = await appsRes.json();
+    studentProfile = await profRes.json();
+  }
+
+  renderJobsPage();
+}
+
+function renderJobsPage() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">
+        <h2>💼 Browse Jobs</h2>
+        <p>${allJobs.length} opportunities available</p>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="searchInput" placeholder="Search by skill, company..." oninput="filterJobs()" />
+      </div>
+      <select class="filter-select" id="filterType" onchange="filterJobs()">
+        <option value="">All Types</option>
+        <option value="FULL_TIME">Full Time</option>
+        <option value="INTERNSHIP">Internship</option>
+        <option value="PART_TIME">Part Time</option>
+      </select>
+      <select class="filter-select" id="filterCgpa" onchange="filterJobs()">
+        <option value="">Any CGPA</option>
+        <option value="7">CGPA ≥ 7</option>
+        <option value="7.5">CGPA ≥ 7.5</option>
+        <option value="8">CGPA ≥ 8</option>
+        <option value="9">CGPA ≥ 9</option>
+      </select>
+      <button class="btn btn-ghost" onclick="clearFilters()">Clear</button>
+    </div>
+
+    <div id="jobsContainer" class="jobs-grid"></div>
+  `;
+  filterJobs();
+}
+
+function filterJobs() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  const type = document.getElementById('filterType').value;
+  const cgpa = parseFloat(document.getElementById('filterCgpa').value) || 0;
+
+  const filtered = allJobs.filter(j => {
+    if (type && j.jobType !== type) return false;
+    if (cgpa && j.minCgpa > cgpa) return false;
+    if (q) {
+      const combined = (j.title + j.companyName + j.location + (j.requiredSkills||[]).join(' ')).toLowerCase();
+      if (!combined.includes(q)) return false;
+    }
+    return true;
+  });
+
+  const container = document.getElementById('jobsContainer');
+  if (filtered.length === 0) {
+    container.innerHTML = `<div class="empty-state" style="grid-column:1/-1;padding:48px">
+      <div class="empty-icon">🔍</div>
+      <h3>No jobs found</h3>
+      <p>Try adjusting your filters</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = filtered.map(j => renderJobCard(j)).join('');
+}
+
+function clearFilters() {
+  document.getElementById('searchInput').value = '';
+  document.getElementById('filterType').value = '';
+  document.getElementById('filterCgpa').value = '';
+  filterJobs();
+}
+
+function renderJobCard(job) {
+  const applied = myApplications.some(a => a.jobId === job.jobId);
+  const studentSkills = studentProfile ? (studentProfile.skills || []) : [];
+  let matchScore = 0;
+  if (studentProfile && job.requiredSkills && job.requiredSkills.length > 0) {
+    const matched = job.requiredSkills.filter(r =>
+      studentSkills.some(s => s.toLowerCase() === r.toLowerCase())
+    ).length;
+    matchScore = Math.round((matched / job.requiredSkills.length) * 100);
+  }
+
+  return `<div class="job-card">
+    <div class="job-card-header">
+      <div class="job-company-logo">${job.companyName.charAt(0)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="job-title">${job.title}</div>
+        <div class="job-company">${job.companyName}</div>
+      </div>
+      ${statusBadge(job.jobType)}
+    </div>
+
+    <div class="job-meta">
+      <span>📍 ${job.location}</span>
+      <span>🎓 CGPA ${job.minCgpa}+</span>
+      <span>📅 Yr ${job.minYear}+</span>
+    </div>
+
+    <div class="job-ctc">${formatCTC(job.ctcMin, job.ctcMax)}</div>
+
+    ${role === 'STUDENT' && studentSkills.length > 0 ? matchBar(matchScore) : ''}
+
+    <div>
+      <div class="text-xs text-muted fw-600" style="margin-bottom:6px;">REQUIRED SKILLS</div>
+      <div class="job-skills">${skillTagsHtml(job.requiredSkills || [], studentSkills)}</div>
+    </div>
+
+    <div style="font-size:.8rem;color:var(--text-muted);">
+      📅 Deadline: ${job.deadline || 'Not specified'} • Posted ${timeAgo(job.postedDate)}
+    </div>
+
+    <div style="font-size:.85rem;color:var(--text-muted);margin-top:4px;line-height:1.5">
+      ${(job.description||'').substring(0, 100)}${(job.description||'').length > 100 ? '...' : ''}
+    </div>
+
+    <div class="job-actions">
+      ${role === 'STUDENT'
+        ? applied
+          ? `<button class="btn btn-secondary btn-sm" disabled style="flex:1">✅ Already Applied</button>`
+          : `<button class="btn btn-primary btn-sm" style="flex:1" onclick="openApplyModal('${job.jobId}', '${job.title.replace(/'/g,"\\'")}', '${job.companyName}')">Apply Now</button>`
+        : '<button class="btn btn-secondary btn-sm" style="flex:1" onclick="">View Applicants</button>'
+      }
+      <button class="btn btn-ghost btn-sm" onclick="viewJobDetail('${job.jobId}')">Details</button>
+    </div>
+  </div>`;
+}
+
+let currentJobId = null;
+function openApplyModal(jobId, title, company) {
+  currentJobId = jobId;
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'applyModal';
+  overlay.innerHTML = `
+    <div class="modal">
+      <div class="modal-title">Apply for ${title}</div>
+      <p style="color:var(--text-muted);margin-bottom:16px;">at ${company}</p>
+      <div id="applyAlert"></div>
+      <div class="form-group">
+        <label>Cover Letter (optional)</label>
+        <textarea id="coverLetter" rows="4" placeholder="Why are you interested in this role? What makes you a great fit?"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitApplication()">Submit Application 🚀</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function closeModal() {
+  const m = document.getElementById('applyModal');
+  if (m) m.remove();
+  const m2 = document.getElementById('detailModal');
+  if (m2) m2.remove();
+}
+
+async function submitApplication() {
+  const coverLetter = document.getElementById('coverLetter').value;
+  const alertEl = document.getElementById('applyAlert');
+  try {
+    const res = await apiFetch('/api/apply', {
+      method: 'POST',
+      body: JSON.stringify({ jobId: currentJobId, coverLetter })
+    });
+    const data = await res.json();
+    if (data.success) {
+      closeModal();
+      showToast('Application submitted successfully! 🎉');
+      // Refresh page data
+      const appsRes = await apiFetch(`/api/applications?studentId=${userId}`);
+      myApplications = await appsRes.json();
+      filterJobs();
+    } else {
+      alertEl.className = 'alert alert-error';
+      alertEl.textContent = data.error || 'Failed to apply.';
+    }
+  } catch(e) {
+    alertEl.className = 'alert alert-error';
+    alertEl.textContent = 'Network error. Please try again.';
+  }
+}
+
+function viewJobDetail(jobId) {
+  const job = allJobs.find(j => j.jobId === jobId);
+  if (!job) return;
+  const applied = myApplications.some(a => a.jobId === jobId);
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.id = 'detailModal';
+  overlay.innerHTML = `
+    <div class="modal" style="max-width:640px">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
+        <div class="job-company-logo" style="width:52px;height:52px;font-size:22px;border-radius:14px;">${job.companyName.charAt(0)}</div>
+        <div>
+          <div class="modal-title" style="margin-bottom:2px">${job.title}</div>
+          <div class="text-muted">${job.companyName} • ${job.location}</div>
+        </div>
+        <div style="margin-left:auto">${statusBadge(job.jobType)}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;padding:16px;background:var(--bg);border-radius:var(--radius-sm)">
+        <div><div class="text-xs text-muted fw-600">CTC RANGE</div><div class="fw-bold text-success">${formatCTC(job.ctcMin,job.ctcMax)}</div></div>
+        <div><div class="text-xs text-muted fw-600">DEADLINE</div><div class="fw-600">${job.deadline||'Not set'}</div></div>
+        <div><div class="text-xs text-muted fw-600">MIN CGPA</div><div class="fw-600">${job.minCgpa}+</div></div>
+        <div><div class="text-xs text-muted fw-600">MIN YEAR</div><div class="fw-600">Year ${job.minYear}+</div></div>
+      </div>
+      <div style="margin-bottom:16px">
+        <div class="text-xs text-muted fw-600 mb-1">ABOUT THE ROLE</div>
+        <p style="line-height:1.7;font-size:.9rem">${job.description}</p>
+      </div>
+      <div style="margin-bottom:16px">
+        <div class="text-xs text-muted fw-600 mb-1">REQUIRED SKILLS</div>
+        <div class="job-skills">${skillTagsHtml(job.requiredSkills||[], studentProfile?.skills||[])}</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal()">Close</button>
+        ${role==='STUDENT' && !applied
+          ? `<button class="btn btn-primary" onclick="closeModal();openApplyModal('${job.jobId}','${job.title.replace(/'/g,"\\'")}','${job.companyName}')">Apply Now 🚀</button>`
+          : applied ? `<button class="btn btn-secondary" disabled>✅ Already Applied</button>` : ''}
+      </div>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+init();
+</script>
+</body>
+</html>

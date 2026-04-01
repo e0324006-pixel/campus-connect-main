@@ -1,0 +1,11 @@
+NOTIF1775052387927_161|STU1775051355739|New job posted: hi at Tata Consultancy Services|JOB_POSTED|false|1775052387927|
+NOTIF1775052387927_113|STU004|New job posted: hi at Tata Consultancy Services|JOB_POSTED|false|1775052387927|
+NOTIF1775052387926_5|STU005|New job posted: hi at Tata Consultancy Services|JOB_POSTED|false|1775052387926|
+NOTIF1775052387926_716|STU002|New job posted: hi at Tata Consultancy Services|JOB_POSTED|false|1775052387926|
+NOTIF1775052387925_493|STU003|New job posted: hi at Tata Consultancy Services|JOB_POSTED|false|1775052387925|
+NOTIF1775052387921_114|STU001|New job posted: hi at Tata Consultancy Services|JOB_POSTED|false|1775052387921|
+NOTIF1775052085564_732|REC002|VEDHU MS applied for Data Analyst|STATUS_UPDATE|false|1775052085567|
+NOTIF001|STU001|Your application for Software Engineer at TCS has been shortlisted!|STATUS_UPDATE|false|1743225600000|APP001
+NOTIF002|STU003|Interview scheduled for Amazon SDE-1 role on 2025-05-20 10:00 AM.|INTERVIEW_SCHEDULED|false|1743398400000|INT001
+NOTIF003|STU004|Congratulations! You have been selected for ML Engineer at Infosys.|STATUS_UPDATE|false|1743571200000|APP005
+NOTIF004|REC001|Arjun Sharma applied for Software Engineer – Java.|STATUS_UPDATE|true|1743225600000|APP001

@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Broadcast</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth('ADMIN')) throw new Error();
+const userId = getUserId(), role = getRole();
+let notifications = [];
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = nr ? await nr.json() : [];
+  const unread = notifications.filter(n => !n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  renderPage();
+}
+
+function renderPage() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">
+        <h2>📣 Broadcast Notification</h2>
+        <p>Send announcements to students, recruiters, or everyone</p>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">✉️ Compose Broadcast</div>
+        <div style="display:flex;flex-direction:column;gap:16px;margin-top:8px;">
+
+          <div>
+            <label class="form-label">Target Audience</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+              <label class="radio-card" id="lbl_ALL" onclick="selectTarget('ALL')">
+                <input type="radio" name="target" value="ALL" checked style="display:none"/>
+                <span class="radio-icon">🌐</span>
+                <span>Everyone</span>
+              </label>
+              <label class="radio-card" id="lbl_STUDENT" onclick="selectTarget('STUDENT')">
+                <input type="radio" name="target" value="STUDENT" style="display:none"/>
+                <span class="radio-icon">🎓</span>
+                <span>Students Only</span>
+              </label>
+              <label class="radio-card" id="lbl_RECRUITER" onclick="selectTarget('RECRUITER')">
+                <input type="radio" name="target" value="RECRUITER" style="display:none"/>
+                <span class="radio-icon">🏢</span>
+                <span>Recruiters Only</span>
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label class="form-label" for="msgInput">Message</label>
+            <textarea id="msgInput" class="form-input" rows="5"
+              placeholder="Type your announcement here... e.g. 'Placement drive for 2025 batch starts next Monday!'"
+              style="resize:vertical;font-family:inherit;"></textarea>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;">
+              <span class="text-xs text-muted">Be clear and concise</span>
+              <span class="text-xs text-muted" id="charCount">0 / 280</span>
+            </div>
+          </div>
+
+          <button class="btn btn-primary" onclick="sendBroadcast()" id="sendBtn">
+            📣 Send Broadcast
+          </button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">💡 Broadcast Tips</div>
+        <div style="display:flex;flex-direction:column;gap:12px;margin-top:8px;">
+          ${[
+            ['🎯', 'Target the right audience', 'Send placement updates only to students, and job seeker info only to recruiters.'],
+            ['✏️', 'Keep it short', 'Announcements under 140 characters get more engagement.'],
+            ['📅', 'Timing matters', 'Send announcements during college hours (9 AM – 5 PM) for best visibility.'],
+            ['🔔', 'Notifications are instant', 'Users will see the notification badge update immediately in their dashboard.'],
+          ].map(([icon, title, desc]) => `
+            <div style="display:flex;gap:12px;">
+              <div style="font-size:1.5rem;flex-shrink:0">${icon}</div>
+              <div>
+                <div style="font-weight:600;font-size:.875rem;">${title}</div>
+                <div class="text-muted text-xs" style="margin-top:2px;">${desc}</div>
+              </div>
+            </div>`).join('')}
+        </div>
+
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);">
+          <div class="card-title" style="margin-bottom:12px;">📜 Recent Broadcasts</div>
+          <div id="recentBroadcasts">
+            ${notifications.filter(n => n.userId && n.userId.startsWith('BROADCAST_')).slice(0,5).map(n => `
+              <div style="padding:8px 0;border-bottom:1px solid var(--border);">
+                <div style="font-size:.8rem;font-weight:600;">${n.message}</div>
+                <div class="text-xs text-muted">${timeAgo(n.timestamp)} • ${n.userId.replace('BROADCAST_','')}</div>
+              </div>`).join('') || '<p class="text-muted text-sm">No broadcasts sent yet</p>'}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Character counter
+  const msgInput = document.getElementById('msgInput');
+  const charCount = document.getElementById('charCount');
+  msgInput.addEventListener('input', () => {
+    const len = msgInput.value.length;
+    charCount.textContent = `${len} / 280`;
+    charCount.style.color = len > 250 ? 'var(--danger)' : 'var(--text-muted)';
+  });
+
+  // Default select ALL
+  selectTarget('ALL');
+}
+
+let selectedTarget = 'ALL';
+function selectTarget(target) {
+  selectedTarget = target;
+  ['ALL','STUDENT','RECRUITER'].forEach(t => {
+    const lbl = document.getElementById('lbl_' + t);
+    if (lbl) {
+      lbl.style.background = t === target ? 'var(--primary)' : '';
+      lbl.style.color = t === target ? 'white' : '';
+      lbl.style.borderColor = t === target ? 'var(--primary)' : 'var(--border)';
+    }
+  });
+}
+
+async function sendBroadcast() {
+  const message = document.getElementById('msgInput').value.trim();
+  if (!message) { showToast('Please enter a message.', 'error'); return; }
+  if (message.length > 280) { showToast('Message too long (max 280 chars).', 'error'); return; }
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Sending...';
+
+  const r = await apiFetch('/api/admin/broadcast', {
+    method: 'POST',
+    body: JSON.stringify({ message, target: selectedTarget })
+  });
+
+  btn.disabled = false;
+  btn.textContent = '📣 Send Broadcast';
+
+  if (r && r.ok) {
+    showToast(`✅ Broadcast sent to ${selectedTarget === 'ALL' ? 'everyone' : selectedTarget.toLowerCase() + 's'}!`);
+    document.getElementById('msgInput').value = '';
+    document.getElementById('charCount').textContent = '0 / 280';
+  } else {
+    showToast('Failed to send broadcast.', 'error');
+  }
+}
+
+init();
+</script>
+<style>
+.radio-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 2px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 600;
+  font-size: .875rem;
+  transition: all .15s ease;
+  user-select: none;
+}
+.radio-card:hover { border-color: var(--primary); }
+.radio-icon { font-size: 1.1rem; }
+</style>
+</body>
+</html>

@@ -1,0 +1,6 @@
+STU001|Arjun Sharma|arjun@student.edu|pass123|STUDENT|true|Computer Science|4|8.7|Java,Python,React,SQL,Spring Boot|Final year CS student with strong DSA and web dev skills.|9876543210|IIT Bombay
+STU003|Rahul Verma|rahul@student.edu|pass123|STUDENT|true|Information Technology|4|9.1|Java,Kubernetes,AWS,React,Node.js,MongoDB|Top-ranked IT student with full-stack and cloud expertise.|9654321098|BITS Pilani
+STU002|Priya Mehta|priya@student.edu|pass123|STUDENT|true|Electronics|3|7.9|C,C++,MATLAB,Embedded Systems,Python|Third year ECE student interested in embedded systems.|9765432109|NIT Trichy
+STU005|Karthik Nair|karthik@student.edu|pass123|STUDENT|true|Mechanical Engineering|4|7.5|AutoCAD,ANSYS,SolidWorks,Python|Mechanical engineer with CAD and simulation expertise.|9432109876|Anna University
+STU004|Anjali Singh|anjali@student.edu|pass123|STUDENT|true|Computer Science|2|8.2|Python,TensorFlow,NumPy,Pandas|Second year CS student passionate about machine learning.|9543210987|VIT Vellore
+STU1775051355739|VEDHU MS|vedhu2345@gmail.com|123456|STUDENT|true|Computer Science|2|8.0|python,SQL,Pandas,Power BI|hi i  am vedha|634089239|sret

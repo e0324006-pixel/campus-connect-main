@@ -1,0 +1,5 @@
+REC001|Deepa Krishnan|deepa@tcs.com|pass123|RECRUITER|true|Tata Consultancy Services|IT Services|India's largest IT services company, operating in 46 countries.|https://www.tcs.com|8001112222
+REC002|Suresh Rao|suresh@infosys.com|pass123|RECRUITER|true|Infosys|IT Consulting|Global leader in next-generation digital services and consulting.|https://www.infosys.com|8002223333
+REC003|Nisha Patel|nisha@wipro.com|pass123|RECRUITER|true|Wipro|IT Services|Technology company that delivers solutions across 6 continents.|https://www.wipro.com|8003334444
+REC004|Amit Joshi|amit@amazon.com|pass123|RECRUITER|true|Amazon|E-Commerce & Cloud|Global technology and commerce leader.|https://www.amazon.com|8004445555
+REC005|Kavya Reddy|kavya@pending.com|pass123|RECRUITER|false|StartupXYZ|FinTech|||

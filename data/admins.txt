@@ -1,0 +1,1 @@
+admin001|Campus Admin|admin@campus.edu|admin123|ADMIN|true|SUPER

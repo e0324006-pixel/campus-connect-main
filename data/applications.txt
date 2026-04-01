@@ -1,0 +1,6 @@
+APP001|STU001|JOB001|Tata Consultancy Services|Software Engineer – Java|SHORTLISTED|1743225600000|I have 2 years of Java experience and love backend development.||
+APP002|STU001|JOB004|Amazon|SDE-1 – Cloud Engineering|APPLIED|1743312000000|||
+APP003|STU003|JOB004|Amazon|SDE-1 – Cloud Engineering|INTERVIEW_SCHEDULED|1743398400000||INT001|
+APP004|STU002|JOB003|Wipro|Full Stack Developer Intern|REJECTED|1743484800000||Skills don't match the current requirement.|
+APP005|STU004|JOB005|Infosys|Machine Learning Engineer|SELECTED|1743571200000|||
+APP1775052085550|STU1775051355739|JOB002|Infosys|Data Analyst|APPLIED|1775052085552|||

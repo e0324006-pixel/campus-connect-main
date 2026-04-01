@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Post a Job</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth()) throw new Error();
+const userId = getUserId();
+const role = getRole();
+let notifications = [];
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = await nr.json();
+  const unread = notifications.filter(n => !n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  renderPage();
+}
+
+function renderPage() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><h2>📢 Post a New Job</h2><p>Fill out the details to attract the right candidates</p></div>
+    </div>
+
+    <div class="content-grid">
+      <div class="card">
+        <div id="postAlert"></div>
+
+        <div class="form-group"><label>Job Title *</label>
+          <input type="text" id="jTitle" placeholder="e.g. Software Engineer – Java" /></div>
+
+        <div class="form-group"><label>Job Description *</label>
+          <textarea id="jDesc" rows="5" placeholder="Describe the role, responsibilities, and what you are looking for..."></textarea></div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Location *</label>
+            <input type="text" id="jLoc" placeholder="Mumbai, Bangalore, Remote..." /></div>
+          <div class="form-group"><label>Job Type</label>
+            <select id="jType">
+              <option value="FULL_TIME">Full Time</option>
+              <option value="INTERNSHIP">Internship</option>
+              <option value="PART_TIME">Part Time</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>CTC Min (₹/year)</label>
+            <input type="number" id="jCtcMin" placeholder="500000" /></div>
+          <div class="form-group"><label>CTC Max (₹/year)</label>
+            <input type="number" id="jCtcMax" placeholder="900000" /></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Minimum CGPA</label>
+            <input type="number" id="jCgpa" step="0.1" min="0" max="10" placeholder="7.0" /></div>
+          <div class="form-group"><label>Minimum Year</label>
+            <select id="jYear">
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4" selected>Final Year</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-group"><label>Required Skills *</label>
+          <input type="text" id="jSkills" placeholder="Java, Spring Boot, SQL, REST APIs (comma separated)" />
+          <div id="skillsPreview" class="job-skills" style="margin-top:8px"></div>
+        </div>
+
+        <div class="form-group"><label>Application Deadline</label>
+          <input type="date" id="jDeadline" /></div>
+
+        <div class="modal-footer" style="justify-content:flex-start;margin-top:8px">
+          <button class="btn btn-primary" onclick="submitJob()">🚀 Post Job</button>
+          <button class="btn btn-secondary" onclick="window.location.href='my-jobs.html'">Cancel</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title">💡 Tips for a great listing</div>
+          <ul style="padding-left:20px;color:var(--text-muted);font-size:.875rem;line-height:2">
+            <li>Be specific about required skills</li>
+            <li>Set a realistic CGPA cutoff</li>
+            <li>Write a clear, engaging description</li>
+            <li>Include a realistic CTC range</li>
+            <li>Set a deadline to create urgency</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('jSkills').addEventListener('input', function() {
+    const skills = this.value.split(',').map(s=>s.trim()).filter(Boolean);
+    document.getElementById('skillsPreview').innerHTML = skills.map(s=>`<span class="skill-tag">${s}</span>`).join('');
+  });
+}
+
+async function submitJob() {
+  const body = {
+    title: document.getElementById('jTitle').value.trim(),
+    description: document.getElementById('jDesc').value.trim(),
+    location: document.getElementById('jLoc').value.trim(),
+    jobType: document.getElementById('jType').value,
+    ctcMin: document.getElementById('jCtcMin').value || '0',
+    ctcMax: document.getElementById('jCtcMax').value || '0',
+    minCgpa: document.getElementById('jCgpa').value || '0',
+    minYear: document.getElementById('jYear').value,
+    skills: document.getElementById('jSkills').value,
+    deadline: document.getElementById('jDeadline').value
+  };
+
+  const alertEl = document.getElementById('postAlert');
+  if (!body.title || !body.description || !body.location) {
+    alertEl.className = 'alert alert-error';
+    alertEl.textContent = 'Please fill in Title, Description, and Location.';
+    return;
+  }
+
+  const res = await apiFetch('/api/jobs/post', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  if (data.success) {
+    alertEl.className = 'alert alert-success';
+    alertEl.textContent = '✅ Job posted successfully! Students will be notified.';
+    showToast('Job posted!');
+    setTimeout(() => window.location.href = 'my-jobs.html', 1500);
+  } else {
+    alertEl.className = 'alert alert-error';
+    alertEl.textContent = data.error || 'Failed to post job.';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

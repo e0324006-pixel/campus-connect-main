@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Profile</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth()) throw new Error();
+const userId = getUserId();
+const role = getRole();
+let notifications = [], profile = null;
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = await nr.json();
+  const unread = notifications.filter(n => !n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"><div class="loading-spinner"></div></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  if (role === 'STUDENT') {
+    const r = await apiFetch(`/api/profile/student?studentId=${userId}`);
+    profile = await r.json();
+    renderStudentProfile();
+  } else if (role === 'RECRUITER') {
+    const r = await apiFetch(`/api/profile/recruiter?recruiterId=${userId}`);
+    profile = await r.json();
+    renderRecruiterProfile();
+  }
+}
+
+function renderStudentProfile() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><h2>👤 My Profile</h2><p>Keep your profile updated to improve job matches</p></div>
+    </div>
+
+    <div id="profileAlert"></div>
+
+    <div class="content-grid">
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">🧑‍🎓 Personal Information</div>
+          <div class="form-row">
+            <div class="form-group"><label>Full Name</label>
+              <input type="text" id="pName" value="${profile.name||''}" disabled style="background:var(--bg)" /></div>
+            <div class="form-group"><label>Email</label>
+              <input type="email" value="${profile.email||''}" disabled style="background:var(--bg)" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Phone Number</label>
+              <input type="text" id="pPhone" value="${profile.phone||''}" placeholder="10-digit number" /></div>
+            <div class="form-group"><label>CGPA</label>
+              <input type="number" id="pCgpa" value="${profile.cgpa||''}" step="0.1" min="0" max="10" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>College / University</label>
+              <input type="text" id="pCollege" value="${profile.college||''}" placeholder="Your college name" /></div>
+            <div class="form-group"><label>Department</label>
+              <input type="text" value="${profile.department||''}" disabled style="background:var(--bg)" /></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">🛠️ Skills</div>
+          <p class="text-muted text-sm" style="margin-bottom:12px">Enter your skills separated by commas (e.g. Java, Python, React)</p>
+          <div class="form-group">
+            <textarea id="pSkills" rows="3" placeholder="Java, Python, React, SQL, Spring Boot...">${(profile.skills||[]).join(', ')}</textarea>
+          </div>
+          <div id="skillPreview" class="job-skills" style="margin-top:8px">
+            ${(profile.skills||[]).map(s => `<span class="skill-tag">${s}</span>`).join('')}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📄 Resume Summary</div>
+          <div class="form-group">
+            <textarea id="pResume" rows="5" placeholder="Write a brief summary about yourself — your background, key skills, career goals...">${profile.resumeSummary||''}</textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="saveProfile()">💾 Save Profile</button>
+        </div>
+      </div>
+
+      <!-- Sidebar Info -->
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div style="text-align:center;padding:8px 0">
+            <div class="user-avatar" style="width:72px;height:72px;font-size:1.8rem;border-radius:18px;margin:0 auto 12px">
+              ${(profile.name||'?').charAt(0)}
+            </div>
+            <div style="font-weight:700;font-size:1.1rem">${profile.name}</div>
+            <div class="text-muted text-sm">${profile.department} • Year ${profile.year}</div>
+            <div style="margin:12px 0">
+              <div class="cgpa-value">${profile.cgpa||'–'}</div>
+              <div class="cgpa-label">CGPA / 10</div>
+            </div>
+            <div class="badge ${profile.profileComplete ? 'badge-selected' : 'badge-pending'}">
+              ${profile.profileComplete ? '✅ Profile Complete' : '⚠️ Incomplete'}
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📊 Profile Checklist</div>
+          ${checklist(profile)}
+        </div>
+      </div>
+    </div>
+  `;
+
+  const skillsInput = document.getElementById('pSkills');
+  const skillPreview = document.getElementById('skillPreview');
+  if (skillsInput && skillPreview) {
+    skillsInput.addEventListener('input', function () {
+      const skills = this.value.split(',').map(s => s.trim()).filter(Boolean);
+      skillPreview.innerHTML = skills.map(s => `<span class="skill-tag">${s}</span>`).join('');
+    });
+  }
+}
+
+function checklist(p) {
+  const items = [
+    ['Phone Number', p.phone],
+    ['College Name', p.college],
+    ['CGPA', p.cgpa > 0],
+    ['Skills', p.skills && p.skills.length > 0],
+    ['Resume Summary', p.resumeSummary],
+  ];
+  return items.map(([label, ok]) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span>${ok ? '✅' : '⬜'}</span>
+      <span style="font-size:.875rem;${ok ? '' : 'color:var(--text-muted)'}">${label}</span>
+    </div>
+  `).join('');
+}
+
+async function saveProfile() {
+  const body = {
+    userId,
+    phone: document.getElementById('pPhone').value.trim(),
+    cgpa: document.getElementById('pCgpa').value,
+    college: document.getElementById('pCollege').value.trim(),
+    skills: document.getElementById('pSkills').value,
+    resumeSummary: document.getElementById('pResume').value.trim()
+  };
+  const res = await apiFetch('/api/profile/student', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  const el = document.getElementById('profileAlert');
+  if (data.success) {
+    el.className = 'alert alert-success';
+    el.textContent = '✅ Profile saved successfully!';
+    showToast('Profile updated!');
+    // Reload to update completeness
+    const r2 = await apiFetch(`/api/profile/student?studentId=${userId}`);
+    profile = await r2.json();
+  } else {
+    el.className = 'alert alert-error';
+    el.textContent = data.error || 'Failed to save.';
+  }
+}
+
+function renderRecruiterProfile() {
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title"><h2>🏢 Company Profile</h2><p>Keep your company information up to date</p></div>
+    </div>
+    <div id="profileAlert"></div>
+    <div class="content-grid">
+      <div>
+        <div class="card" style="margin-bottom:16px">
+          <div class="card-title">🏢 Company Details</div>
+          <div class="form-row">
+            <div class="form-group"><label>Your Name</label>
+              <input value="${profile.name||''}" disabled style="background:var(--bg)" /></div>
+            <div class="form-group"><label>Work Email</label>
+              <input value="${profile.email||''}" disabled style="background:var(--bg)" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Company Name</label>
+              <input value="${profile.companyName||''}" disabled style="background:var(--bg)" /></div>
+            <div class="form-group"><label>Industry</label>
+              <input value="${profile.industry||''}" disabled style="background:var(--bg)" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Phone</label>
+              <input type="text" id="rPhone" value="${profile.phone||''}" placeholder="Contact number" /></div>
+            <div class="form-group"><label>Website</label>
+              <input type="url" id="rWebsite" value="${profile.website||''}" placeholder="https://company.com" /></div>
+          </div>
+          <div class="form-group"><label>Company Description</label>
+            <textarea id="rDesc" rows="4" placeholder="Describe your company, culture, and what you do...">${profile.companyDescription||''}</textarea>
+          </div>
+          <button class="btn btn-primary btn-full" onclick="saveRecruiterProfile()">💾 Save Profile</button>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div style="text-align:center;padding:12px 0">
+            <div class="user-avatar" style="width:72px;height:72px;font-size:1.8rem;border-radius:18px;margin:0 auto 12px;background:linear-gradient(135deg,var(--accent),var(--primary))">
+              ${(profile.companyName||'?').charAt(0)}
+            </div>
+            <div style="font-weight:700;font-size:1.1rem">${profile.companyName}</div>
+            <div class="text-muted text-sm">${profile.industry}</div>
+            <div style="margin-top:12px">
+              ${profile.isApproved
+                ? '<span class="badge badge-selected">✅ Account Approved</span>'
+                : '<span class="badge badge-pending">⏳ Pending Approval</span>'}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+async function saveRecruiterProfile() {
+  const body = {
+    userId,
+    phone: document.getElementById('rPhone').value.trim(),
+    website: document.getElementById('rWebsite').value.trim(),
+    companyDescription: document.getElementById('rDesc').value.trim()
+  };
+  const res = await apiFetch('/api/profile/recruiter', { method: 'POST', body: JSON.stringify(body) });
+  const data = await res.json();
+  const el = document.getElementById('profileAlert');
+  if (data.success) {
+    el.className = 'alert alert-success';
+    el.textContent = '✅ Profile saved successfully!';
+    showToast('Profile updated!');
+  } else {
+    el.className = 'alert alert-error';
+    el.textContent = data.error || 'Save failed.';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

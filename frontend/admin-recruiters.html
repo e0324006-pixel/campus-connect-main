@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Recruiters</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="root"></div>
+<script src="app.js"></script>
+<script>
+if (!requireAuth('ADMIN')) throw new Error();
+const userId = getUserId(), role = getRole();
+let notifications = [], recruiters = [];
+
+async function init() {
+  const nr = await apiFetch(`/api/notifications?userId=${userId}`);
+  notifications = nr ? await nr.json() : [];
+  const unread = notifications.filter(n => !n.isRead).length;
+
+  document.getElementById('root').innerHTML = `
+    <div class="app-shell">
+      ${renderHeader(getName(), role, unread)}
+      ${renderSidebar(role)}
+      <main class="main-content" id="mainContent"><div class="loading-spinner"></div></main>
+    </div>
+    ${renderNotifPanel(notifications)}
+  `;
+
+  const r = await apiFetch('/api/admin/users?role=RECRUITER');
+  const data = r ? await r.json() : {};
+  recruiters = data.recruiters || [];
+  renderPage();
+}
+
+function renderPage() {
+  const pending = recruiters.filter(r => !r.isApproved);
+  const approved = recruiters.filter(r => r.isApproved);
+
+  const mc = document.getElementById('mainContent');
+  mc.innerHTML = `
+    <div class="page-header">
+      <div class="page-title">
+        <h2>🏢 Recruiter Management</h2>
+        <p>${recruiters.length} total • ${pending.length} pending approval</p>
+      </div>
+    </div>
+
+    ${pending.length > 0 ? `
+    <div class="card" style="margin-bottom:20px;border-left:4px solid var(--warning);">
+      <div class="card-title">⏳ Pending Approvals (${pending.length})</div>
+      ${pending.map(r => recruiterRow(r, true)).join('')}
+    </div>` : ''}
+
+    <div class="card">
+      <div class="card-title">✅ Approved Recruiters (${approved.length})</div>
+      ${approved.length === 0
+        ? '<div class="empty-state" style="padding:24px"><p>No approved recruiters yet</p></div>'
+        : approved.map(r => recruiterRow(r, false)).join('')}
+    </div>
+  `;
+}
+
+function recruiterRow(r, showActions) {
+  return `
+    <div class="applicant-row" id="row_${r.userId}">
+      <div class="applicant-avatar" style="background:var(--accent)">${r.companyName.charAt(0)}</div>
+      <div class="applicant-info">
+        <div class="applicant-name">${r.companyName}</div>
+        <div class="applicant-sub">${r.name} • ${r.email} • ${r.industry}</div>
+        ${r.phone ? `<div class="text-xs text-muted">📞 ${r.phone}</div>` : ''}
+      </div>
+      <div class="applicant-actions">
+        ${showActions ? `
+          <button class="btn btn-success btn-sm" onclick="approveRec('${r.userId}')">✅ Approve</button>
+          <button class="btn btn-danger btn-sm" onclick="rejectRec('${r.userId}')">❌ Reject</button>
+        ` : `<span class="badge badge-selected">✅ Approved</span>`}
+      </div>
+    </div>`;
+}
+
+async function approveRec(id) {
+  const r = await apiFetch('/api/admin/approve', {
+    method: 'POST',
+    body: JSON.stringify({ recruiterId: id, action: 'approve' })
+  });
+  if (r) {
+    showToast('Recruiter approved!');
+    document.getElementById('row_' + id).remove();
+  }
+}
+
+async function rejectRec(id) {
+  if (!confirm('Permanently reject and remove this recruiter?')) return;
+  const r = await apiFetch('/api/admin/approve', {
+    method: 'POST',
+    body: JSON.stringify({ recruiterId: id, action: 'reject' })
+  });
+  if (r) {
+    showToast('Recruiter rejected.', 'info');
+    document.getElementById('row_' + id).remove();
+  }
+}
+
+init();
+</script>
+</body>
+</html>

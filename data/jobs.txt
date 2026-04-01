@@ -1,0 +1,7 @@
+JOB001|Software Engineer – Java|Build enterprise applications using Java and Spring Boot.|Tata Consultancy Services|REC001|Java,Spring Boot,SQL,REST APIs|600000.0|900000.0|7.0|3|Mumbai|FULL_TIME|OPEN|1743225600000|2025-06-30
+JOB002|Data Analyst|Analyze large datasets and build dashboards.|Infosys|REC002|Python,SQL,Pandas,Power BI|500000.0|750000.0|7.5|3|Bangalore|FULL_TIME|OPEN|1743398400000|2025-07-15
+JOB003|Full Stack Developer Intern|Build features for our internal tools.|Wipro|REC003|React,Node.js,MongoDB,JavaScript|25000.0|35000.0|7.0|2|Hyderabad|INTERNSHIP|OPEN|1743571200000|2025-05-31
+JOB004|SDE-1 – Cloud Engineering|Work on AWS infrastructure and microservices.|Amazon|REC004|Java,AWS,Kubernetes,Distributed Systems|1500000.0|2200000.0|8.0|4|Bangalore|FULL_TIME|OPEN|1743052800000|2025-06-15
+JOB005|Machine Learning Engineer|Develop and deploy ML models at scale.|Infosys|REC002|Python,TensorFlow,PyTorch,MLOps,SQL|900000.0|1300000.0|8.0|4|Pune|FULL_TIME|OPEN|1743484800000|2025-07-01
+JOB006|DevOps Engineer|Manage CI/CD pipelines and cloud infrastructure.|Tata Consultancy Services|REC001|Docker,Kubernetes,Jenkins,AWS,Linux|800000.0|1100000.0|7.5|3|Chennai|FULL_TIME|OPEN|1743312000000|2025-06-20
+JOB1775052387920|hi|as jBXXJS<|Tata Consultancy Services|REC001|hgyukfjgf|5555.0|777777.0|8.0|4|xasBCXSDj|FULL_TIME|CLOSED|1775052387920|2025-10-05

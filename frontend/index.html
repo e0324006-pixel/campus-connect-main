@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Campus Connect — Login</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="logo-icon">🎓</div>
+      <h1>Campus<span style="color:var(--primary)">Connect</span></h1>
+      <p>Intelligent Campus Placement Platform</p>
+    </div>
+
+    <!-- Auth Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Sign In</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Register</button>
+    </div>
+
+    <!-- Alert -->
+    <div id="authAlert" class="hidden"></div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginSection">
+      <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="loginEmail" placeholder="you@example.com" />
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" />
+      </div>
+      <button class="btn btn-primary btn-full" id="loginBtn" onclick="handleLogin()">
+        Sign In to Dashboard
+      </button>
+      <div style="margin-top:20px;padding:14px;background:var(--bg);border-radius:var(--radius-sm);font-size:.8rem;">
+        <div style="font-weight:700;margin-bottom:8px;color:var(--text-muted);">🔑 Demo Credentials</div>
+        <div style="display:grid;gap:4px;">
+          <div><span style="font-weight:600;">Student:</span> arjun@student.edu / pass123</div>
+          <div><span style="font-weight:600;">Recruiter:</span> deepa@tcs.com / pass123</div>
+          <div><span style="font-weight:600;">Admin:</span> admin@campus.edu / admin123</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="registerSection" class="hidden">
+      <!-- Role selector -->
+      <div class="auth-tabs" style="margin-bottom:16px;">
+        <button class="auth-tab active" onclick="switchRegRole('student')">Student</button>
+        <button class="auth-tab" onclick="switchRegRole('recruiter')">Recruiter</button>
+      </div>
+
+      <!-- Student Registration -->
+      <div id="regStudent">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="sName" placeholder="Your full name" />
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="sEmail" placeholder="college email" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="sPass" placeholder="Min 6 chars" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="sPhone" placeholder="10-digit number" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>College / University</label>
+            <input type="text" id="sCollege" placeholder="IIT Bombay" />
+          </div>
+          <div class="form-group">
+            <label>Department</label>
+            <select id="sDept">
+              <option>Computer Science</option>
+              <option>Information Technology</option>
+              <option>Electronics</option>
+              <option>Mechanical Engineering</option>
+              <option>Civil Engineering</option>
+              <option>MBA</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Year of Study</label>
+            <select id="sYear">
+              <option value="1">1st Year</option>
+              <option value="2">2nd Year</option>
+              <option value="3">3rd Year</option>
+              <option value="4" selected>4th Year</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>CGPA</label>
+            <input type="number" id="sCgpa" step="0.1" min="0" max="10" placeholder="8.5" />
+          </div>
+        </div>
+        <button class="btn btn-primary btn-full" onclick="handleRegisterStudent()">Create Student Account</button>
+      </div>
+
+      <!-- Recruiter Registration -->
+      <div id="regRecruiter" class="hidden">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Your Name</label>
+            <input type="text" id="rName" placeholder="HR Manager name" />
+          </div>
+          <div class="form-group">
+            <label>Work Email</label>
+            <input type="email" id="rEmail" placeholder="hr@company.com" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="rPass" placeholder="Min 6 chars" />
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="text" id="rPhone" placeholder="Contact number" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Company Name</label>
+            <input type="text" id="rCompany" placeholder="Acme Corp" />
+          </div>
+          <div class="form-group">
+            <label>Industry</label>
+            <select id="rIndustry">
+              <option>IT Services</option>
+              <option>Product Company</option>
+              <option>Banking & Finance</option>
+              <option>E-Commerce</option>
+              <option>Healthcare</option>
+              <option>EdTech</option>
+              <option>FinTech</option>
+              <option>Manufacturing</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+        <div class="alert alert-info">⏳ Recruiter accounts require admin approval before you can post jobs.</div>
+        <button class="btn btn-primary btn-full" onclick="handleRegisterRecruiter()">Register as Recruiter</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+  // Check if already logged in
+  const existingToken = localStorage.getItem('cc_token');
+  if (existingToken) window.location.href = 'dashboard.html';
+
+  function switchAuthTab(tab) {
+    document.querySelectorAll('.auth-tabs .auth-tab').forEach((t,i) => {
+      t.classList.toggle('active', (tab==='login' && i===0) || (tab==='register' && i===1));
+    });
+    document.getElementById('loginSection').classList.toggle('hidden', tab !== 'login');
+    document.getElementById('registerSection').classList.toggle('hidden', tab !== 'register');
+    clearAlert();
+  }
+
+  function switchRegRole(role) {
+    const tabs = document.querySelectorAll('#registerSection .auth-tabs .auth-tab');
+    tabs[0].classList.toggle('active', role === 'student');
+    tabs[1].classList.toggle('active', role === 'recruiter');
+    document.getElementById('regStudent').classList.toggle('hidden', role !== 'student');
+    document.getElementById('regRecruiter').classList.toggle('hidden', role !== 'recruiter');
+  }
+
+  function showAlert(msg, type = 'error') {
+    const el = document.getElementById('authAlert');
+    el.className = `alert alert-${type}`;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+  }
+  function clearAlert() { document.getElementById('authAlert').classList.add('hidden'); }
+
+  async function handleLogin() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    if (!email || !password) { showAlert('Please enter email and password.'); return; }
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true; btn.textContent = 'Signing in...';
+    try {
+      const res = await fetch('http://localhost:8080/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (!res.ok) { showAlert(data.error || 'Login failed'); return; }
+      localStorage.setItem('cc_token', data.token);
+      localStorage.setItem('cc_userId', data.userId);
+      localStorage.setItem('cc_name', data.name);
+      localStorage.setItem('cc_role', data.role);
+      window.location.href = 'dashboard.html';
+    } catch (e) {
+      showAlert('Cannot connect to server. Make sure the Java server is running on port 8080.');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Sign In to Dashboard';
+    }
+  }
+
+  async function handleRegisterStudent() {
+    const body = {
+      name: document.getElementById('sName').value.trim(),
+      email: document.getElementById('sEmail').value.trim(),
+      password: document.getElementById('sPass').value,
+      phone: document.getElementById('sPhone').value.trim(),
+      college: document.getElementById('sCollege').value.trim(),
+      department: document.getElementById('sDept').value,
+      year: document.getElementById('sYear').value,
+      cgpa: document.getElementById('sCgpa').value || '0'
+    };
+    if (!body.name || !body.email || !body.password) { showAlert('Please fill required fields.'); return; }
+    const res = await fetch('http://localhost:8080/api/register/student', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) {
+      showAlert('Account created! Please sign in.', 'success');
+      switchAuthTab('login');
+      document.getElementById('loginEmail').value = body.email;
+    } else showAlert(data.error || 'Registration failed');
+  }
+
+  async function handleRegisterRecruiter() {
+    const body = {
+      name: document.getElementById('rName').value.trim(),
+      email: document.getElementById('rEmail').value.trim(),
+      password: document.getElementById('rPass').value,
+      phone: document.getElementById('rPhone').value.trim(),
+      companyName: document.getElementById('rCompany').value.trim(),
+      industry: document.getElementById('rIndustry').value
+    };
+    if (!body.name || !body.email || !body.password || !body.companyName) {
+      showAlert('Please fill all required fields.'); return;
+    }
+    const res = await fetch('http://localhost:8080/api/register/recruiter', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+    });
+    const data = await res.json();
+    if (data.success) showAlert('Registration submitted! Await admin approval.', 'success');
+    else showAlert(data.error || 'Registration failed');
+  }
+
+  // Enter key for login
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const loginVisible = !document.getElementById('loginSection').classList.contains('hidden');
+      if (loginVisible) handleLogin();
+    }
+  });
+</script>
+</body>
+</html>
